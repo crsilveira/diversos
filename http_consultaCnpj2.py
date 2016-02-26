@@ -91,12 +91,12 @@ class base_nfse(object):
 
             signNode = xmlsec.TmplSignature(doc_xml, xmlsec.transformInclC14NId(),
                                             xmlsec.transformRsaSha1Id(), None)
-            
+
             doc_xml.getRootElement().addChild(signNode)
-            
+
             refNode = signNode.addReference(xmlsec.transformSha1Id(),
                                             None, reference, None)
-            
+
             refNode.addTransform(xmlsec.transformEnvelopedId())
             refNode.addTransform(xmlsec.transformInclC14NId())
             keyInfoNode = signNode.ensureKeyInfo()
@@ -203,7 +203,7 @@ class HTTPSClientCertTransport(HttpTransport):
         else:
             return url.open(u2request, timeout=tm)
 
-class EnvelopeFixer(MessagePlugin): 
+class EnvelopeFixer(MessagePlugin):
 
     def sending(self, context):
         # removendo prefixo
@@ -213,16 +213,16 @@ class EnvelopeFixer(MessagePlugin):
         context.envelope = re.sub( '<VersaoSchema>', '<VersaoSchema>1</VersaoSchema><MensagemXML>', str(context.envelope) )
         return context.envelope
 
-    def marshalled(self, context): 
-        #print context.envelope.str()       
-        envelope = context.envelope    
+    def marshalled(self, context):
+        #print context.envelope.str()
+        envelope = context.envelope
         envelope.name = 'Envelope'
         envelope.setPrefix('soap12')
         envelope.nsprefixes = {
-           'xsi' : 'http://www.w3.org/2001/XMLSchema-instance', 
+           'xsi' : 'http://www.w3.org/2001/XMLSchema-instance',
            'soap12': 'http://www.w3.org/2003/05/soap-envelope',
            'xsd' : 'http://www.w3.org/2001/XMLSchema'
-           
+
         }
         body_ele = envelope.getChildren()[1]
         body_ele.setPrefix("soap12")
@@ -238,8 +238,8 @@ logging.getLogger('suds.transport').setLevel(logging.DEBUG)
 logging.getLogger('suds.xsd.schema').setLevel(logging.DEBUG)
 logging.getLogger('suds.wsdl').setLevel(logging.DEBUG)
 
-certificado = '/home/carlos/ats/clientes_server/ats/certificado_ats.pfx'
-chave = 'ats2015cer'
+certificado = '/home/tas/clientes_server/ats/certificado_ats.pfx'
+chave = 'senha_cert'
 host = 'nfe.prefeitura.sp.gov.br'
 uri = '/ws/lotenfe.asmx?wsdl'
 
@@ -255,8 +255,8 @@ suds.bindings.binding.envns = ('SOAP-ENV',
 
 base = base_nfse(pfx_tmp, chave)
 
-t = HTTPSClientCertTransport('/home/carlos/ats/clientes_server/ats/atskey2.pem',
-                             '/home/carlos/ats/clientes_server/ats/atscert.pem')
+t = HTTPSClientCertTransport('/home/tas/clientes_server/ats/key2.pem',
+                             '/home/tas/clientes_server/ats/cert.pem')
 
 envelope = EnvelopeFixer()
 
@@ -265,31 +265,18 @@ c = Client('https://nfe.prefeitura.sp.gov.br/ws/lotenfe.asmx?wsdl',
     timeout=300,
     transport = t, plugins=[envelope])
 
-#, plugins=[envelope]
-#headers=headers,
-# remove o cabecalho do SOAP    
-#, nosend=True
+# carregar xml do arquivo
+#xml = open('/home/tas/consulta_cnpj.xml','r')
+#xml_send = xml.read()
 
-#c.options.prettyxml = True   
+xml_send = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><p1:PedidoConsultaCNPJ xmlns:p1=\"http://www.prefeitura.sp.gov.br/nfe\"><Cabecalho Versao=\"1\"><CPFCNPJRemetente><CNPJ>08123456000111</CNPJ></CPFCNPJRemetente></Cabecalho><CNPJContribuinte><CNPJ>64123456000114</CNPJ></CNPJContribuinte></p1:PedidoConsultaCNPJ>"
 
-#    
-    
-#print c
+xml_send = Raw(xml_send)
 
-#xml_send = open('/home/carlos/ats/pyxmlsec.xml', 'r')
-
-xml = open('/home/carlos/ats/consulta_cnpj.xml','r')
-xml_send = xml.read()
-                  
-#xml_send = "<p1:ConsultaCNPJRequest><CPFCNPJRemetente><CNPJ>08382545000111</CNPJ></CPFCNPJRemetente></Cabecalho><CNPJContribuinte><CNPJ>64533847000114</CNPJ></CNPJContribuinte></p1:ConsultaCNPJRequest>"
-xml_send = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><p1:PedidoConsultaCNPJ xmlns:p1=\"http://www.prefeitura.sp.gov.br/nfe\"><Cabecalho Versao=\"1\"><CPFCNPJRemetente><CNPJ>08382545000111</CNPJ></CPFCNPJRemetente></Cabecalho><CNPJContribuinte><CNPJ>64533847000114</CNPJ></CNPJContribuinte></p1:PedidoConsultaCNPJ>"
- 
-xml_send = Raw(xml_send)                                      
-                                            
 reference = ""
 xml_signed = base.assina_xml(xml_send, reference, pfx_tmp, str(chave))
 
-arq_temp = open('/home/carlos/ats/xml_assinado.xml', 'w')
+arq_temp = open('/home/tas/xml_assinado.xml', 'w')
 arq_temp.write(xml_signed)
 arq_temp.close()
 
@@ -300,13 +287,12 @@ message = \
 "xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap12=\"http://www.w3.org/2003/05/soap-envelope\">"\
 "<soap12:Body>" + xml_send + \
 "</soap12:Body>"\
-"</soap12:Envelope>"    
+"</soap12:Envelope>"
 """
 
 #TODO - arrumar para pasta do sistema
-#valida_schema = base.valida_schema(xml_signed, '/home/carlos/ats/doc/fiscal/NFSe_SP/schemas/nfse/PedidoEnvioLoteRPS_v01.xsd')
 
-valida_schema = base.valida_schema(xml_signed, '/home/carlos/ats/doc/fiscal/NFSe_SP/schemas/nfse/PedidoConsultaCNPJ_v01.xsd')
+valida_schema = base.valida_schema(xml_signed, '/home/tas/doc/fiscal/NFSe_SP/schemas/nfse/PedidoConsultaCNPJ_v01.xsd')
 
 if len(valida_schema):
     erros = "Erro(s) no XML: \n"
@@ -314,40 +300,23 @@ if len(valida_schema):
         erros += erro['type_name'] + ': ' + erro['message'] + '\n'
     raise ValueError(erros)
 
-#xml_signed = xml_signed.replace(
-#                    '<?xml version="1.0" encoding="UTF-8"?>',
-#                    '<VersaoSchema>1</VersaoSchema><MensagemXML>')
-
-#xml_signed = xml_signed.replace(
-#                    '</p1:PedidoConsultaCNPJ>',
-#                    '</p1:PedidoConsultaCNPJ></MensagemXML>')
 
 print xml_signed
 xml_pronto = xml_signed
- 
-arq_temp = open('/home/carlos/ats/xml_soap.xml', 'w')
+
+arq_temp = open('/home/tas/xml_soap.xml', 'w')
 arq_temp.write(xml_pronto)
 arq_temp.close()
 
 #import pudb;pu.db
 
-#arq_temp = open('/home/carlos/ats/xml_soap.xml', 'r')
-#xml_pronto = arq_temp.read()
-#xml_p = ET.ElementTree(xml_pronto)
-#xml_str = ET.tostring(xml_pronto, encoding='utf8', method='xml')
-
-
 try:
-    #parser = etree.XMLParser(remove_blank_text=True)
-    #xml_envia = etree.XML(xml_pronto, parser=parser)
     x = c.service.ConsultaCNPJ(xml_pronto)
 finally:
     base.finalizar_cripto()
 
-"""
-arq_temp = open('/home/carlos/ats/retorno.xml', 'w')
+arq_temp = open('/home/tas/retorno.xml', 'w')
 arq_temp.write(x)
 arq_temp.close()
-"""
 
 print x
